@@ -245,7 +245,7 @@ function importData($tabName, $filePath)
 function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 	$subtitle=null, $frt=null, $notes=null,
 	$firmText1=null, $firmText2=null,$botInfo=null,
-	$footer=null,$content=null) {
+	$footer=null,$clienteData=null,$results=null) {
 
 		?>
 	<style type="text/css">
@@ -295,9 +295,8 @@ function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 			<td style="width: 25%;text-align: center;font-size: 10px"><?php echo strtoupper($frt) ?></td>
 		</tr>
 	</table>
-	<p>
-		<?php echo $content ?>
-	</p>
+	<?php echo getClientData($clienteData) ?>
+	<?php echo getResultData($results) ?>
 	<table class="table" cellspacing="0" width="100%">
 		<tr>
 			<td style="width: 100%">
@@ -334,4 +333,53 @@ function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 	</table>
 		<?php
 
+}
+# Obtiene la tabla Resultados en html 
+# como aparece en la imágen de los ejemplos
+/*results = Array[
+	[parameter=>"", method=>"", ref=>"", res=>"", date=>""],
+	[parameter=>"", method=>"", ref=>"", res=>"", date=>""],
+	...
+]*/
+function getResultData($results) {
+	if ($results) {
+		ob_clean();
+		?>
+		<table class='analyst-resultData'>
+			<thead>
+				<th>Parámetro</th>
+				<th>Método</th>
+				<th>Referencia</th>
+				<th>Resultados</th>
+				<th>Fecha</th>
+			</thead>
+			<?php foreach ($results as $key => $value): ?>
+				<tr>
+					<td><?php echo $value['parameter'] ?></td>
+					<td><?php echo $value['method'] ?></td>
+					<td><?php echo $value['ref'] ?></td>
+					<td><?php echo $value['res'] ?></td>
+					<td><?php echo $value['date'] ?></td>
+				</tr>
+			<?php endforeach ?>
+		</table>
+		<?php
+		return ob_get_contents();
+	}
+}
+# Obtiene la tabla información suministrada por el cliente en html 
+# como aparece en la imágen de los ejemplos
+# Estado del tiempo(weather), Tipo de Muestra(sampleType), ...
+function getClientData($weather, $sampleType, $pH, 
+	$requestedBy, $source, $sampledBy,
+	$samplingSite, $samplingDate){
+		ob_clean();
+		?>
+		<table class='analyst-clientData'>
+			
+			
+		</table>
+		<?php
+	return ob_get_contents();
+	
 }

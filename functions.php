@@ -13,6 +13,7 @@ define('USER', 'root');
 define('PASS', '');
 define('DBNAME', 'funciones_emerson');
 
+$templatesTableName = "templates";
 
 $mysqli = new mysqli(HOST, USER, PASS, DBNAME);
 
@@ -49,6 +50,35 @@ function getColumns($tabName){
 	}
 	return $header;
 	
+}
+// # Lista y filtra una tabla
+function getListArray($tabName, $filterName, $filterValue) {
+    global $mysqli;
+
+    $header=getColumns($tabName);
+    
+    $sql="SELECT * FROM $tabName WHERE $filterName='$filterValue'";
+	$resultado=doQuery($sql);
+	return $resultado->fetch_all(MYSQLI_BOTH);
+	/*$noColumnas = count($header);
+	$html='<thead>';
+	for ($i=0; $i < count($header) ; $i++) { 
+		$html.="<th>".$header[$i]."</th>";
+	}
+
+	$html.='</thead>';
+	
+	foreach ($resultado->fetch_all(MYSQLI_BOTH) as $key => $value) {
+		
+		$html.='<tr>';
+		for ($j=0; $j < $noColumnas ; $j++) { 
+			
+			$html.="<td>".$value[$j]."</td>";
+		}
+		$html.='</tr>';
+	}	
+
+    return "<table class='analyst-list'>".$html."</table>";*/
 }
 // # Lista y filtra una tabla
 function getList($tabName, $filterName, $filterValue) {
@@ -233,19 +263,74 @@ function importData($tabName, $filePath)
 	return true;
 }
 
-# Genera y guarda una plantilla de reporte
-/*function saveReportTemplate(File logo1, File logo2, String title,
-	String subtitle, String frt, String notes,
-	String firmText1, String firmText2, String botInfo,
-	String footer) {
-	...
-}
+
+/*
+	crea una tabla si no existe para guardar los templates de los clientes
 */
+function createTableToTemplates(){
+
+	global $mysqli,$templatesTableName;
+
+	$create="CREATE TABLE IF NOT EXISTS `$templatesTableName` (
+	  `id` int(8) NOT NULL AUTO_INCREMENT,
+	  `clienteName` varchar(100) NOT NULL,
+	  `method` text NOT NULL,
+	  `created` TIMESTAMP,
+	  PRIMARY KEY (`id`)
+	) ENGINE=MyISAM  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1";	
+
+	if (!$mysqli->query($create)) {
+		showErrors();
+	}
+	return true;
+}
+/*
+	function para guardar la plantilla con la información en method
+
+*/
+function saveTemplateInDb($clientName,$method){
+
+	global $mysqli,$templatesTableName;
+
+	$sql = "INSERT INTO $templatesTableName (clienteName,method) VALUES ('$clientName','$method')";
+
+	if (!$mysqli->query($sql)) {
+		showErrors();
+	}
+	return true;
+
+}
 # Genera y guarda una plantilla de reporte
 function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 	$subtitle=null, $frt=null, $notes=null,
 	$firmText1=null, $firmText2=null,$botInfo=null,
-	$footer=null,$clienteData=null,$results=null) {
+	$footer=null) {
+
+	saveTemplateInDb(time(),"$logo1;-;$logo2;-;$title;-;$subtitle;-;$frt;-;$notes;-;$firmText1;-;$firmText2;-;$botInfo;-;$footer");
+
+}
+function getTemplates(){
+
+	global $mysqli,$templatesTableName;
+
+	$sql = "SELECT * FROM $templatesTableName order by id asc";
+
+	$result = $mysqli->query($sql);
+
+	$rows = $result->fetch_all(MYSQLI_ASSOC);
+	
+	return $rows;
+	
+}
+/*
+	function para imprimir en html un reporte
+*/
+function printReportTemplate($logo1=null,$logo2=null, $title=null,
+	$subtitle=null, $frt=null, $notes=null,
+	$firmText1=null, $firmText2=null,$botInfo=null,
+	$footer=null){
+
+	global $results, $clientData,$encabezado;
 
 		?>
 	<style type="text/css">
@@ -257,14 +342,14 @@ function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 		<thead>
 			<td width="50%">
 				<?php if ($logo1 and file_exists($logo1)): ?>
-					<img width="400" height="200" src="<?php echo $logo1 ?>" alt="">
+					<img width="300" height="100" src="<?php echo $logo1 ?>" alt="">
 				<?php else: ?>
 					<img src="" alt="IMAGEN NO ENCONTRADA">
 				<?php endif ?>
 			</td>
 			<td width="50%" style="text-align: right;">
 				<?php if ($logo2 and file_exists($logo2)): ?>
-					<img width="300" height="100" src="<?php echo $logo2 ?>" alt="">
+					<img width="200" height="50" src="<?php echo $logo2 ?>" alt="">
 				<?php else: ?>
 					<img src="" alt="IMAGEN NO ENCONTRADA">
 				<?php endif ?>				
@@ -295,12 +380,14 @@ function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 			<td style="width: 25%;text-align: center;font-size: 10px"><?php echo strtoupper($frt) ?></td>
 		</tr>
 	</table>
-	<?php echo getClientData($clienteData) ?>
-	<?php echo getResultData($results) ?>
+	<?php echo $encabezado ?>
+	<?php echo $clientData ?>
+	<?php echo $results ?>
+
 	<table class="table" cellspacing="0" width="100%">
 		<tr>
 			<td style="width: 100%">
-				<p style="text-align: justify;padding: 10px">
+				<p style="text-align: justify;padding: 10px;font-size: 14px">
 					<?php echo $notes ?>
 				</p>
 			</td>
@@ -331,8 +418,7 @@ function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 			</td>
 		</tr>
 	</table>
-		<?php
-
+		<?php	
 }
 # Obtiene la tabla Resultados en html 
 # como aparece en la imágen de los ejemplos
@@ -343,43 +429,86 @@ function saveReportTemplate($logo1=null,$logo2=null, $title=null,
 ]*/
 function getResultData($results) {
 	if ($results) {
-		ob_clean();
-		?>
-		<table class='analyst-resultData'>
+		$table = "<h3>Resultados:</h3>";
+		$table .= "<table class='analyst-resultData' cellspacing='0' border='1' width='100%'>
 			<thead>
 				<th>Parámetro</th>
 				<th>Método</th>
 				<th>Referencia</th>
 				<th>Resultados</th>
 				<th>Fecha</th>
-			</thead>
-			<?php foreach ($results as $key => $value): ?>
-				<tr>
-					<td><?php echo $value['parameter'] ?></td>
-					<td><?php echo $value['method'] ?></td>
-					<td><?php echo $value['ref'] ?></td>
-					<td><?php echo $value['res'] ?></td>
-					<td><?php echo $value['date'] ?></td>
-				</tr>
-			<?php endforeach ?>
-		</table>
-		<?php
-		return ob_get_contents();
+			</thead>";
+			foreach ($results as $key => $value):
+				$table .= "<tr>
+					<td>".$value['parameter']."</td>
+					<td>".$value['method']."</td>
+					<td>".$value['ref']."</td>
+					<td>".$value['res']."</td>
+					<td>".$value['date']."</td>
+				</tr>";
+			endforeach;
+		$table .= "</table>";
+
+		return $table;
 	}
+}
+function encabezado($code=null,$fechaRecepcion=null){
+
+
+	$table = "<table class='' cellspacing='0' border='1'>
+		<tr>
+			<td><b>Código</b>: </td>
+			<td>$code</td>
+		</tr>
+		<tr>
+			<td><b>Fecha y hora de Recepción: </b></td>
+			<td>$fechaRecepcion</td>
+		</tr>
+
+	</table>";
+
+	return $table;	
 }
 # Obtiene la tabla información suministrada por el cliente en html 
 # como aparece en la imágen de los ejemplos
 # Estado del tiempo(weather), Tipo de Muestra(sampleType), ...
-function getClientData($weather, $sampleType, $pH, 
-	$requestedBy, $source, $sampledBy,
-	$samplingSite, $samplingDate){
-		ob_clean();
-		?>
-		<table class='analyst-clientData'>
+function getClientData($weather = null, $sampleType = null, $pH = null, 
+	$requestedBy = null, $source = null, $sampledBy = null,
+	$samplingSite = null, $samplingDate = null){
+
+	$table = "<h4>INFORMACIÓN SUMINISTRADA POR EL CLIENTE</h4>";
+	$table .= "<table class='analyst-clientData' width='100%' cellspacing='0' border='1'>
+		<tr>
+			<td>Estado del tiempo: </td>
+			<td>$weather</td>
 			
-			
-		</table>
-		<?php
-	return ob_get_contents();
+		</tr>
+		<tr>
+			<td><b>Tipo de muestra: </b></td>
+			<td>$sampleType</td>
+			<td><b>Procedencia: </b></td>
+			<td>$source</td>
+		</tr>
+		<tr>
+			<td><b>pH (U, pH): </b></td>
+			<td>$pH</td>	
+			<td><b>Fecha y hora de toma:</b></td>
+			<td>$samplingDate</td>
+		</tr>
+		<tr>
+			<td></td>
+			<td></td>	
+			<td><b>Muestreado por:</b></td>
+			<td>$sampledBy</td>
+		</tr>
+		<tr>
+			<td><b>Solicitado por : </b></td>
+			<td>$requestedBy</td>	
+			<td><b>Sitio de Muestreo:</b></td>
+			<td>$samplingSite</td>
+		</tr>
+	</table>";
+
+	return $table;
 	
 }

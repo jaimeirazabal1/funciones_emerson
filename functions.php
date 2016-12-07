@@ -512,3 +512,16 @@ function getClientData($weather = null, $sampleType = null, $pH = null,
 	return $table;
 	
 }
+
+function cambiarPass($newPass,$id,$tabName="users",$passwordColumn="passwd"){
+
+	global $mysqli;
+
+	$sql = "UPDATE $tabName set $passwordColumn='$newPass' where id = '$id'";
+
+	if (!$mysqli->query($sql)) {
+		showErrors();
+	}
+	return true;
+
+}
